@@ -19,8 +19,9 @@ export default defineNuxtConfig({
   vite: {
     vue: {
       template: {
-        transformAssetUrls,
+        transformAssetUrls
       },
     },
   },
+  
 })
