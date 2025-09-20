@@ -1,9 +1,11 @@
+import { ref, readonly, onMounted } from 'vue'
 import type { Employee, Absence, AbsenceDialogData, CalendarCell } from '../types/absence'
 
 export const useAbsences = () => {
   // State
   const employees = ref<Employee[]>([])
   const absences = ref<Absence[]>([])
+  const yearDates = ref<string[]>([])
   const dialogData = ref<AbsenceDialogData>({
     isOpen: false,
     mode: 'create'
@@ -126,12 +128,18 @@ export const useAbsences = () => {
   const updateAbsence = (id: string, updates: Partial<Omit<Absence, 'id' | 'createdAt'>>) => {
     const index = absences.value.findIndex(absence => absence.id === id)
     if (index !== -1) {
-      absences.value[index] = {
-        ...absences.value[index],
-        ...updates,
-        updatedAt: new Date().toISOString()
+      const existingAbsence = absences.value[index]
+      if (existingAbsence) {
+        const updatedAbsence: Absence = {
+          ...existingAbsence,
+          ...updates as Omit<Absence, 'id' | 'createdAt'>,
+          id: existingAbsence.id,
+          createdAt: existingAbsence.createdAt,
+          updatedAt: new Date().toISOString()
+        }
+        absences.value[index] = updatedAbsence
+        return absences.value[index]
       }
-      return absences.value[index]
     }
     return null
   }
@@ -165,14 +173,28 @@ export const useAbsences = () => {
     }
   }
 
-  // Initialize sample data
-  generateSampleData()
+  // Initialize data only on client side
+  onMounted(() => {
+    const year = new Date().getFullYear()
+    const dates: string[] = []
+    const startDate = new Date(year, 0, 1)
+    const endDate = new Date(year, 11, 31)
+
+    for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+      const dateStr = date.toISOString().split('T')[0]
+      if (dateStr) dates.push(dateStr)
+    }
+    
+    yearDates.value = dates
+    generateSampleData()
+  })
 
   return {
     // State
     employees,
     absences,
     dialogData: readonly(dialogData),
+    yearDates: readonly(yearDates),
     
     // Methods
     generateCalendarCells,
